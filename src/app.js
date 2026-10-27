@@ -10,7 +10,7 @@ import { hello, home } from './pages.js';
 import { preview } from './preview.js';
 import { updateProfile } from './profile.js';
 import { createSafeFetch } from './safe-fetch.js';
-import { transfer } from './transfers.js';
+import { listAccounts, transfer } from './transfers.js';
 
 export function createApp({ db, log, safeFetch = createSafeFetch() }) {
   const app = express();
@@ -60,6 +60,7 @@ export function createApp({ db, log, safeFetch = createSafeFetch() }) {
   app.patch('/api/profile', updateProfile({ db, log }));
   app.post('/api/preview', preview({ safeFetch, log }));
   app.get('/api/lookup', dnsLookup);
+  app.get('/api/accounts', listAccounts({ db }));
   app.post('/api/transfers', transfer({ db, log }));
   app.get('/api/admin/users', requireRole('admin', { log }), (req, res) => {
     res.json(db.prepare('SELECT id, name, role FROM users ORDER BY id').all());

@@ -34,3 +34,9 @@ export function transfer({ db, log }) {
     res.status(201).json({ from, to, amountCents });
   };
 }
+
+// GET /api/accounts: the caller's own accounts.
+export function listAccounts({ db }) {
+  const mine = db.prepare('SELECT id, balance_cents FROM accounts WHERE user_id = ? ORDER BY id');
+  return (req, res) => res.json(mine.all(req.user.id));
+}

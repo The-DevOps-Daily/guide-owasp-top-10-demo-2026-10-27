@@ -75,6 +75,12 @@ export function createVulnerableApp({ db, log }) {
     exec(`nslookup ${req.query.host}`, (err, stdout) => res.type('text').send(stdout));
   });
 
+  app.get('/api/accounts', (req, res) => {
+    res.json(
+      db.prepare('SELECT id, balance_cents FROM accounts WHERE user_id = ?').all(req.user.id)
+    );
+  });
+
   // A10: the debit stays when the credit fails
   app.post('/api/transfers', (req, res) => {
     const { from, to, amountCents } = req.body;
