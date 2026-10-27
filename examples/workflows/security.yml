@@ -78,7 +78,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Start the app
         run: |
-          export DEMO_PASSWORD="$(openssl rand -hex 16)"
+          DEMO_PASSWORD="$(openssl rand -hex 16)"
+          export DEMO_PASSWORD
           nohup npm start > app.log 2>&1 &
           timeout 30 bash -c 'until curl -sf http://127.0.0.1:3000/ > /dev/null; do sleep 1; done'
       - name: ZAP baseline scan (passive)

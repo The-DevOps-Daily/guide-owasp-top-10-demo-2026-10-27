@@ -14,9 +14,30 @@ import { transfer } from './transfers.js';
 
 export function createApp({ db, log, safeFetch = createSafeFetch() }) {
   const app = express();
-  app.use(helmet()); // security headers; also removes X-Powered-By
+  // Security headers; helmet also removes X-Powered-By. The CSP replaces helmet's
+  // "https:" and "data:" sources with 'self', since this app loads nothing else.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          'font-src': ["'self'"],
+          'img-src': ["'self'"],
+          'style-src': ["'self'"],
+          'frame-ancestors': ["'none'"],
+        },
+      },
+    })
+  );
+  app.use((req, res, next) => {
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
   app.use(requestId);
   app.use(express.json({ limit: '10kb' })); // nothing without a limit
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store'); // API responses hold private data and tokens
+    next();
+  });
 
   app.get('/', home);
   app.get('/hello', hello);
