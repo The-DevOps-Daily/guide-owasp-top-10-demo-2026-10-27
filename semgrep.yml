@@ -1,6 +1,6 @@
-# Project rules for sinks the public rule packs do not know: node:sqlite,
-# child_process and fetch. Each rule follows request data (req.query, req.params,
-# req.body) to a place where it changes code, not data.
+# Project rules for the sinks that the public rule packs missed in this app:
+# node:sqlite, child_process and fetch. Each rule follows request data (req.query,
+# req.params, req.body) to a place where it becomes code or a destination.
 rules:
   - id: request-data-in-sql-text
     mode: taint

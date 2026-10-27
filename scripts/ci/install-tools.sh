@@ -28,6 +28,11 @@ fetch https://releases.hashicorp.com/terraform/1.17.0/terraform_1.17.0_linux_amd
   c168cab7c637a8769fdb90089ddd19de701bc6ff8aca64dc2e2185fe46f59f67 terraform.zip
 unzip -q -o "$work/terraform.zip" terraform -d "$BIN"
 
+fetch https://github.com/grafana/loki/releases/download/v3.7.9/lokitool-linux-amd64.zip \
+  eba96fc190bb3c4c14ae96c69212bd9aacd92644e7fa2565e12b46a5031d10d9 lokitool.zip
+unzip -q -o -j "$work/lokitool.zip" -d "$work/lokitool"
+install -m 0755 "$work/lokitool/lokitool-linux-amd64" "$BIN/lokitool"
+
 pipx install --quiet semgrep==1.182.1
 pipx install --quiet zizmor==1.31.1
 

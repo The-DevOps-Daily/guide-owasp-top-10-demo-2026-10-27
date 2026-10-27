@@ -14,6 +14,7 @@ must 'rm -rf examples/deploy/secrets'
 must 'docker build -q -f examples/deploy/Dockerfile -t invoices-demo:ci .'
 must 'docker build -q -f examples/insecure/Dockerfile -t invoices-demo:insecure .'
 must 'actionlint examples/workflows/security.yml .github/workflows/guide.yml'
+must 'lokitool rules lint --dry-run examples/alerts/loki-rules.yaml && lokitool rules check examples/alerts/loki-rules.yaml'
 
 export NO_COLOR=1
 

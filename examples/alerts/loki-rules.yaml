@@ -1,0 +1,33 @@
+# A09 example: Loki alerting rules for the invoices app's JSON logs. They assume
+# the log shipper sets the stream label service="invoices".
+groups:
+  - name: invoices-security
+    rules:
+      - alert: LoginFailuresFromOneAddress
+        expr: |
+          sum by (ip) (
+            count_over_time({service="invoices"} | json | event =~ "authn_login_fail.*" [5m])
+          ) > 20
+        labels:
+          severity: page
+        annotations:
+          summary: 'More than 20 failed logins from {{ $labels.ip }} in 5 minutes'
+          runbook: 'https://wiki.example.com/runbooks/credential-stuffing'
+
+      - alert: LoginFailuresAcrossAccounts
+        expr: |
+          sum(count_over_time({service="invoices"} | json | event =~ "authn_login_fail.*" [15m])) > 200
+        labels:
+          severity: page
+        annotations:
+          summary: 'Failed logins across all accounts are unusually high: possible credential stuffing'
+
+      - alert: AccessDeniedBurst
+        expr: |
+          sum by (ip) (
+            count_over_time({service="invoices"} | json | event =~ "authz_fail.*" [10m])
+          ) > 10
+        labels:
+          severity: ticket
+        annotations:
+          summary: 'More than 10 access control failures from {{ $labels.ip }} in 10 minutes'
