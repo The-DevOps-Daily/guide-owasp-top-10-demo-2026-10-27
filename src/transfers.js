@@ -4,6 +4,9 @@ export function transfer({ db, log }) {
     'UPDATE accounts SET balance_cents = balance_cents - ? WHERE id = ? AND user_id = ?'
   );
   const credit = db.prepare('UPDATE accounts SET balance_cents = balance_cents + ? WHERE id = ?');
+  const audit = db.prepare(
+    'INSERT INTO transfers (user_id, from_account, to_account, amount_cents) VALUES (?, ?, ?, ?)'
+  );
 
   return (req, res) => {
     const { from, to, amountCents } = req.body ?? {};
@@ -22,7 +25,17 @@ export function transfer({ db, log }) {
           expose: true,
         });
       }
+      // The audit record is part of the same transaction: no transfer without one.
+      const { lastInsertRowid } = audit.run(req.user.id, from, to, amountCents);
       db.exec('COMMIT');
+      log.info(
+        {
+          event: `transfer_created:${req.user.name}`,
+          transferId: Number(lastInsertRowid),
+          reqId: req.id,
+        },
+        'transfer'
+      );
     } catch (err) {
       if (db.isTransaction) db.exec('ROLLBACK'); // fail closed: undo the debit too
       log.warn(

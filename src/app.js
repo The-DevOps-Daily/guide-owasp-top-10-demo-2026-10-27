@@ -33,11 +33,11 @@ export function createApp({ db, log, safeFetch = createSafeFetch() }) {
     next();
   });
   app.use(requestId);
-  app.use(express.json({ limit: '10kb' })); // nothing without a limit
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store'); // API responses hold private data and tokens
     next();
   });
+  app.use(express.json({ limit: '10kb' })); // nothing without a limit
 
   app.get('/', home);
   app.get('/hello', hello);
@@ -61,8 +61,8 @@ export function createApp({ db, log, safeFetch = createSafeFetch() }) {
   app.post('/api/login', loginLimiter, login({ db, log }));
 
   // Everything below needs a valid session.
-  app.use('/api', authenticate({ db }));
-  app.post('/api/logout', logout({ db }));
+  app.use('/api', authenticate({ db, log }));
+  app.post('/api/logout', logout({ db, log }));
   app.use('/api/invoices', invoiceRoutes({ db, log }));
   app.post('/api/orders', createOrder({ db }));
   app.patch('/api/profile', updateProfile({ db, log }));

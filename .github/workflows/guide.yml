@@ -54,6 +54,8 @@ jobs:
           retention-days: 30
 
   attest:
+    # Only main, which needs a reviewed pull request, may publish the attested package.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

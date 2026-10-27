@@ -1,6 +1,7 @@
 # SSRF defense in depth: the invoices pods may resolve names and open HTTPS
-# connections to public addresses, and nothing else. Add rules for the services
-# your app really needs, such as its database.
+# connections to public addresses. Add rules for the services your app really
+# needs, such as its database. Kubernetes always lets a pod reach its own node,
+# so node services need host-level protection as well.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

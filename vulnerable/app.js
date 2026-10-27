@@ -20,7 +20,7 @@ export function createVulnerableApp({ db, log }) {
 
   // A07: no limit on login attempts
   app.post('/api/login', login({ db, log }));
-  app.use('/api', authenticate({ db }));
+  app.use('/api', authenticate({ db, log }));
 
   // A01: any logged-in user can read any invoice by changing the ID
   app.get('/api/invoices/:id', (req, res) => {

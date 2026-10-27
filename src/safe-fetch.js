@@ -5,6 +5,28 @@ import net from 'node:net';
 
 export class SsrfError extends Error {}
 
+// A dns.lookup() call holds a thread pool slot until the resolver answers, even after
+// the request that started it has given up. Limit how many run and wait at once.
+const MAX_ACTIVE_LOOKUPS = 4;
+const MAX_WAITING_LOOKUPS = 32;
+let activeLookups = 0;
+const waitingLookups = [];
+
+export function boundedLookup(hostname, options, callback) {
+  if (activeLookups >= MAX_ACTIVE_LOOKUPS) {
+    if (waitingLookups.length >= MAX_WAITING_LOOKUPS) {
+      return process.nextTick(callback, new SsrfError('too many DNS lookups'));
+    }
+    return waitingLookups.push(() => boundedLookup(hostname, options, callback));
+  }
+  activeLookups++;
+  dns.lookup(hostname, options, (...args) => {
+    activeLookups--;
+    waitingLookups.shift()?.();
+    callback(...args);
+  });
+}
+
 // IPv4 ranges that are not public: "this network", private, shared (CGNAT), loopback,
 // link-local (cloud metadata), IETF, documentation, benchmarking, multicast and reserved.
 // Source: the IANA IPv4 and IPv6 special-purpose address registries.
@@ -52,7 +74,7 @@ export function isPublicAddress(address) {
 // changes between a check and the request (DNS rebinding) cannot slip through.
 export function createSafeFetch({ isAllowed = isPublicAddress } = {}) {
   function lookup(hostname, options, callback) {
-    dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    boundedLookup(hostname, { ...options, all: true }, (err, addresses) => {
       if (err) return callback(err);
       const bad = addresses.find((a) => !isAllowed(a.address));
       if (bad) return callback(new SsrfError(`blocked address ${bad.address}`));

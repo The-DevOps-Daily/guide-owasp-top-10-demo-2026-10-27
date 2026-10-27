@@ -42,6 +42,14 @@ export async function openDb({ demoPassword }) {
       user_id INTEGER NOT NULL REFERENCES users(id),
       balance_cents INTEGER NOT NULL CHECK (balance_cents >= 0)
     );
+    CREATE TABLE transfers (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      from_account INTEGER NOT NULL,
+      to_account INTEGER NOT NULL,
+      amount_cents INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
   `);
 
   const hash = await hashPassword(demoPassword);

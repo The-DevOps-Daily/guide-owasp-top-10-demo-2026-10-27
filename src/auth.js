@@ -40,7 +40,7 @@ export function login({ db, log }) {
 }
 
 // Every protected route runs this first. No valid session, no access.
-export function authenticate({ db }) {
+export function authenticate({ db, log }) {
   return (req, res, next) => {
     const m = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(req.get('authorization') ?? '');
     const row =
@@ -51,7 +51,13 @@ export function authenticate({ db }) {
            WHERE s.token_hash = ? AND s.expires_at > ?`
         )
         .get(sha256(m[1]), Date.now());
-    if (!row) return res.status(401).json({ error: 'Authentication required' });
+    if (!row) {
+      // A token that is wrong or expired is worth a log line; no token at all is routine.
+      if (req.get('authorization')) {
+        log.warn({ event: 'authn_token_invalid', ip: req.ip, reqId: req.id }, 'bad token');
+      }
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     req.user = row;
     req.sessionTokenHash = sha256(m[1]);
     next();
@@ -59,9 +65,10 @@ export function authenticate({ db }) {
 }
 
 // POST /api/logout: the session ends on the server, not only in the client.
-export function logout({ db }) {
+export function logout({ db, log }) {
   return (req, res) => {
     db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(req.sessionTokenHash);
+    log.info({ event: `session_logout:${req.user.name}`, ip: req.ip, reqId: req.id }, 'logout');
     res.status(204).end();
   };
 }
