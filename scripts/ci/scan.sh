@@ -12,6 +12,7 @@ must 'mkdir -p examples/deploy/secrets && echo example > examples/deploy/secrets
 must 'docker compose -f examples/deploy/compose.yaml config -q && docker compose -f examples/insecure/compose.yaml config -q'
 must 'rm -rf examples/deploy/secrets'
 must 'docker build -q -f examples/deploy/Dockerfile -t invoices-demo:ci .'
+must 'docker build -q -f examples/insecure/Dockerfile -t invoices-demo:insecure .'
 must 'actionlint examples/workflows/security.yml .github/workflows/guide.yml'
 
 export NO_COLOR=1
@@ -31,9 +32,11 @@ CMD
 capture trivy-outdated 0 <<'CMD'
 trivy fs --quiet --scanners vuln --format json examples/outdated | jq -r '.Results[].Vulnerabilities[] | [.Severity, .PkgName, .InstalledVersion, .VulnerabilityID, .FixedVersion] | @tsv' | column -t -s $'\t'
 CMD
-capture trivy-image 0 <<'CMD'
-trivy image --quiet --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json invoices-demo:ci | jq -r '.Results[] | select(.Vulnerabilities) | "\(.Target): \([.Vulnerabilities[].PkgName] | unique | join(", "))"'
+for tag in insecure ci; do
+  capture "trivy-image-$tag" 0 <<CMD
+trivy image --quiet --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --format json invoices-demo:$tag | jq -r '[.Results[] | {type: .Type, n: (.Vulnerabilities // [] | length)}] | group_by(.type)[] | "\(.[0].type): \(map(.n) | add)"'
 CMD
+done
 
 # A02: misconfiguration in Kubernetes, Dockerfile and Terraform files
 for dir in insecure deploy terraform; do
