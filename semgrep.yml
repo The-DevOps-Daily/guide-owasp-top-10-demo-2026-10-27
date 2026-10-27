@@ -1,0 +1,75 @@
+# Project rules for sinks the public rule packs do not know: node:sqlite,
+# child_process and fetch. Each rule follows request data (req.query, req.params,
+# req.body) to a place where it changes code, not data.
+rules:
+  - id: request-data-in-sql-text
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Request data reaches the SQL text of a query. Use ? placeholders and pass the
+      values to run(), get() or all().
+    metadata:
+      owasp: 'A05:2025 - Injection'
+      cwe: 'CWE-89'
+    pattern-sources:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: $DB.prepare($SQL)
+          - pattern: $SQL
+
+  - id: request-data-in-shell-command
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Request data reaches a shell command. Use a library call, or execFile() with an
+      argument array and strict validation.
+    metadata:
+      owasp: 'A05:2025 - Injection'
+      cwe: 'CWE-78'
+    pattern-sources:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: exec($CMD, ...)
+              - pattern-inside: execSync($CMD, ...)
+          - pattern: $CMD
+
+  - id: request-data-as-fetch-url
+    mode: taint
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Request data decides which URL the server fetches (SSRF). Use the address-checking
+      safeFetch() from src/safe-fetch.js, or an allowlist.
+    metadata:
+      owasp: 'A01:2025 - Broken Access Control'
+      cwe: 'CWE-918'
+    pattern-sources:
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.body
+    pattern-sinks:
+      - patterns:
+          - pattern-inside: fetch($URL, ...)
+          - pattern: $URL
+
+  - id: request-body-copied-onto-object
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Every field of the request body is copied onto an object (mass assignment). Copy
+      only the fields the caller may change.
+    metadata:
+      owasp: 'A08:2025 - Software or Data Integrity Failures'
+      cwe: 'CWE-915'
+    pattern-either:
+      - pattern: Object.assign($OBJ, $REQ.body)
+      - pattern: '{ ...$OBJ, ...$REQ.body }'

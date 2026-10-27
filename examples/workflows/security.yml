@@ -51,7 +51,7 @@ jobs:
         run: >-
           docker run --rm -v "$PWD:/src:ro" -w /src
           semgrep/semgrep:1.182.1@sha256:451b3d875c00dac7ed5db5293e584a07de11449a409c10b3c2d2652f429630b6
-          semgrep scan --config p/javascript --config p/owasp-top-ten --metrics off --error src
+          semgrep scan --config p/javascript --config p/owasp-top-ten --config semgrep.yml --metrics off --error src
 
   config:
     runs-on: ubuntu-24.04

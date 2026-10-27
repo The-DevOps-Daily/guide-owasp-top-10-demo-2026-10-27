@@ -1,0 +1,22 @@
+# A03 and A08 example: a pull request workflow with common CI/CD mistakes.
+# It sits in examples/insecure/ so it never runs. Do not copy it.
+name: PR checks
+
+on:
+  pull_request_target:
+
+permissions: write-all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: echo "Testing ${{ github.event.pull_request.title }}"
+      - uses: actions/setup-node@v4
+      - run: npm install
+      - run: npm test
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
