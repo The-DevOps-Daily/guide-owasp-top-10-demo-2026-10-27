@@ -1,5 +1,7 @@
 # A09 example: Loki alerting rules for the invoices app's JSON logs. They assume
-# the log shipper sets the stream label service="invoices".
+# the log shipper sets the stream label service="invoices". Label regexes match the
+# whole value and "." skips line breaks, so (?s) keeps a user name containing a line
+# break from hiding an event.
 groups:
   - name: invoices-security
     rules:
@@ -7,7 +9,7 @@ groups:
         # authn_login_fail_max is logged for every request the rate limiter refuses
         expr: |
           sum by (ip) (
-            count_over_time({service="invoices"} | json | event =~ "authn_login_fail_max.*" [15m])
+            count_over_time({service="invoices"} | json | event =~ "(?s)authn_login_fail_max:.*" [15m])
           ) > 10
         labels:
           severity: page
@@ -17,7 +19,7 @@ groups:
 
       - alert: LoginFailuresAcrossAccounts
         expr: |
-          sum(count_over_time({service="invoices"} | json | event =~ "authn_login_fail.*" [15m])) > 200
+          sum(count_over_time({service="invoices"} | json | event =~ "(?s)authn_login_fail:.*" [15m])) > 200
         labels:
           severity: page
         annotations:
@@ -26,7 +28,7 @@ groups:
       - alert: AccessDeniedBurst
         expr: |
           sum by (ip) (
-            count_over_time({service="invoices"} | json | event =~ "authz_fail.*" [10m])
+            count_over_time({service="invoices"} | json | event =~ "(?s)authz_fail:.*" [10m])
           ) > 10
         labels:
           severity: ticket

@@ -1,5 +1,7 @@
 # Accepted Trivy findings. Each entry says why it is accepted, and expires so
 # that someone reviews it again. Changes to this file need a security review.
+# The statements describe controls outside this repository that the examples
+# assume; an exception is only valid while its statement is true.
 misconfigurations:
   - id: KSV-0011
     statement: >-

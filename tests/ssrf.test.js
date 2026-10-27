@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import http from 'node:http';
+import net from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { createSafeFetch, isPublicAddress } from '../src/safe-fetch.js';
 import { startApp } from './helpers.js';
@@ -69,6 +70,21 @@ describe('SSRF: the preview endpoint', { skip }, () => {
     slow.server.closeAllConnections();
     slow.server.close();
   });
+
+  it('refuses a response that switches protocols', async () => {
+    const raw = net.createServer((socket) => {
+      socket.once('data', () =>
+        socket.write(
+          'HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: x\r\n\r\n'
+        )
+      );
+    });
+    raw.listen(0, '127.0.0.2');
+    await once(raw, 'listening');
+    const safeFetch = createSafeFetch({ isAllowed: (a) => a === '127.0.0.2' });
+    await assert.rejects(safeFetch(`http://127.0.0.2:${raw.address().port}/`), /upgrades|closed/);
+    raw.close();
+  });
 });
 
 describe('SSRF: isPublicAddress', () => {
@@ -85,6 +101,8 @@ describe('SSRF: isPublicAddress', () => {
     '::ffff:127.0.0.1': false,
     'fd00::1': false,
     'fe80::1': false,
+    '192.0.2.10': false,
+    '3fff::1': false,
   };
   for (const [address, expected] of Object.entries(cases)) {
     it(`${address} is ${expected ? 'public' : 'not public'}`, () => {

@@ -5,8 +5,9 @@ import net from 'node:net';
 
 export class SsrfError extends Error {}
 
-// IPv4 ranges that are not public: "this network", private, shared (CGNAT),
-// loopback, link-local (cloud metadata), IETF, benchmarking, multicast and reserved.
+// IPv4 ranges that are not public: "this network", private, shared (CGNAT), loopback,
+// link-local (cloud metadata), IETF, documentation, benchmarking, multicast and reserved.
+// Source: the IANA IPv4 and IPv6 special-purpose address registries.
 const blockedV4 = new net.BlockList();
 for (const [address, prefix] of [
   ['0.0.0.0', 8],
@@ -16,8 +17,11 @@ for (const [address, prefix] of [
   ['169.254.0.0', 16],
   ['172.16.0.0', 12],
   ['192.0.0.0', 24],
+  ['192.0.2.0', 24],
   ['192.168.0.0', 16],
   ['198.18.0.0', 15],
+  ['198.51.100.0', 24],
+  ['203.0.113.0', 24],
   ['224.0.0.0', 3],
 ]) {
   blockedV4.addSubnet(address, prefix, 'ipv4');
@@ -30,6 +34,7 @@ const blockedV6 = new net.BlockList();
 blockedV6.addSubnet('2001::', 23, 'ipv6');
 blockedV6.addSubnet('2001:db8::', 32, 'ipv6');
 blockedV6.addSubnet('2002::', 16, 'ipv6');
+blockedV6.addSubnet('3fff::', 20, 'ipv6');
 
 export function isPublicAddress(address) {
   switch (net.isIP(address)) {
@@ -76,27 +81,41 @@ export function createSafeFetch({ isAllowed = isPublicAddress } = {}) {
     }
     const client = url.protocol === 'https:' ? https : http;
     return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadline);
+        fn(value);
+      };
+      const fail = (err) => {
+        settle(reject, err);
+        req.destroy();
+      };
       const req = client.get(url, { lookup, agent: false }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400) {
-          res.destroy();
-          return reject(new SsrfError('redirects are not followed'));
+          return fail(new SsrfError('redirects are not followed'));
         }
         const chunks = [];
         let size = 0;
         res.on('data', (chunk) => {
           size += chunk.length;
-          if (size > maxBytes) return req.destroy(new SsrfError('response too large'));
+          if (size > maxBytes) return fail(new SsrfError('response too large'));
           chunks.push(chunk);
         });
         res.on('end', () =>
-          resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') })
+          settle(resolve, { status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') })
         );
-        res.on('error', reject);
+        res.on('error', fail);
       });
       // One deadline for the whole exchange: lookup, connect, headers and body.
-      const deadline = setTimeout(() => req.destroy(new SsrfError('timed out')), timeoutMs);
-      req.on('close', () => clearTimeout(deadline));
-      req.on('error', reject);
+      const deadline = setTimeout(() => fail(new SsrfError('timed out')), timeoutMs);
+      req.on('upgrade', (res, socket) => {
+        socket.destroy();
+        fail(new SsrfError('protocol upgrades are not allowed'));
+      });
+      req.on('error', fail);
+      req.on('close', () => settle(reject, new SsrfError('connection closed early')));
     });
   };
 }
