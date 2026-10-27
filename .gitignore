@@ -1,0 +1,5 @@
+node_modules/
+captures/
+*.log
+*.tgz
+examples/deploy/secrets/

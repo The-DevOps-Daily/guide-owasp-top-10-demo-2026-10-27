@@ -1,0 +1,87 @@
+name: Guide runs
+
+# Runs the scanners from the OWASP Top 10 guide and keeps their output as an
+# artifact. It runs only when started by hand. The vulnerable app starts only
+# inside the runner and listens on 127.0.0.1.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the tools
+        run: scripts/ci/install-tools.sh
+      - name: Scan
+        env:
+          GH_TOKEN: ${{ github.token }} # zizmor's online audits
+        run: scripts/ci/scan.sh
+      - name: Keep the output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: captures-scan
+          path: captures/
+          retention-days: 30
+
+  zap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - name: Scan both apps with ZAP
+        run: scripts/ci/zap.sh
+      - name: Keep the output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: captures-zap
+          path: captures/
+          retention-days: 30
+
+  attest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # Sigstore signing certificate
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Build the package tarball
+        run: npm pack --ignore-scripts
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: owasp-top-10-demo-1.0.0.tgz
+      - name: Verify the attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_FORCE_TTY: '1'
+          NO_COLOR: '1'
+        run: scripts/ci/verify.sh
+      - name: Keep the output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: captures-attest
+          path: captures/
+          retention-days: 30

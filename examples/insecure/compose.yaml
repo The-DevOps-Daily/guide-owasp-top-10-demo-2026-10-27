@@ -1,0 +1,8 @@
+# A02 example: default credentials and a database port open to the network. Do not run it.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'

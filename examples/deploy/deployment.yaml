@@ -1,0 +1,43 @@
+# A02 example: the same Deployment with secure settings.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: invoices
+  template:
+    metadata:
+      labels:
+        app: invoices
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          # Pin by digest in real use; the tag here keeps the example readable.
+          image: example.com/invoices:1.0.0
+          env:
+            - name: DEMO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: invoices
+                  key: demo-password
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi

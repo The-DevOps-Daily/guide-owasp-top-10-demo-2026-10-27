@@ -1,0 +1,9 @@
+{
+  "name": "outdated-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A pinned, old Express release for the A03 dependency audit example. Never deploy it.",
+  "dependencies": {
+    "express": "4.17.1"
+  }
+}

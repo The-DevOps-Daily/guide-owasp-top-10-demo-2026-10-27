@@ -1,0 +1,23 @@
+# A02 example: what a quick first Deployment often looks like. Do not apply it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: invoices
+  template:
+    metadata:
+      labels:
+        app: invoices
+    spec:
+      containers:
+        - name: app
+          image: example.com/invoices:latest
+          env:
+            - name: DEMO_PASSWORD
+              value: 'changeme-changeme'
+          securityContext:
+            privileged: true

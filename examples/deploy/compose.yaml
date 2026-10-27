@@ -1,0 +1,13 @@
+# The same database without default credentials or a published port.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    # No "ports:": only containers on this Compose network can connect.
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt # created at deploy time, never committed
