@@ -25,7 +25,10 @@ export function transfer({ db, log }) {
       db.exec('COMMIT');
     } catch (err) {
       if (db.isTransaction) db.exec('ROLLBACK'); // fail closed: undo the debit too
-      log.warn({ event: 'transfer_failed', reason: err.message, user: req.user.name }, 'rollback');
+      log.warn(
+        { event: 'transfer_failed', reason: err.message, user: req.user.name, reqId: req.id },
+        'rollback'
+      );
       if (err.errstr === 'constraint failed') {
         throw Object.assign(new Error('insufficient funds'), { status: 409, expose: true });
       }

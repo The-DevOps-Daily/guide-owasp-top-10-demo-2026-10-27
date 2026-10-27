@@ -48,7 +48,15 @@ export function createApp({ db, log, safeFetch = createSafeFetch() }) {
     skipSuccessfulRequests: true,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    message: { error: 'Too many login attempts, try again later' },
+    // Requests over the limit never reach the login handler, so log them here.
+    handler: (req, res, next, options) => {
+      const name = typeof req.body?.name === 'string' ? req.body.name.slice(0, 64) : '';
+      log.warn(
+        { event: `authn_login_fail_max:${name},${options.limit}`, ip: req.ip, reqId: req.id },
+        'login rate limit'
+      );
+      res.status(options.statusCode).json({ error: 'Too many login attempts, try again later' });
+    },
   });
   app.post('/api/login', loginLimiter, login({ db, log }));
 

@@ -6,7 +6,10 @@ export function updateProfile({ db, log }) {
     const body = req.body ?? {};
     const rejected = Object.keys(body).filter((k) => !EDITABLE.has(k));
     if (rejected.length > 0) {
-      log.warn({ event: `input_validation_fail:${rejected},${req.user.name}` }, 'profile');
+      log.warn(
+        { event: `input_validation_fail:${rejected},${req.user.name}`, ip: req.ip, reqId: req.id },
+        'profile'
+      );
       return res.status(400).json({ error: `not editable: ${rejected.join(', ')}` });
     }
     const { displayName } = body;

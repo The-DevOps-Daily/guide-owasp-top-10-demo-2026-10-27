@@ -59,11 +59,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Accepted findings live in .trivyignore.yaml; add --skip-dirs for test fixtures
+      # that are vulnerable on purpose (this repository's examples/ directory, for one).
       - name: Trivy (dependencies, IaC, secrets)
         run: >-
           docker run --rm -v "$PWD:/src:ro"
           aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
-          fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 /src
+          fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL
+          --ignorefile /src/.trivyignore.yaml --exit-code 1 /src
 
   dast:
     runs-on: ubuntu-24.04
@@ -89,4 +92,4 @@ jobs:
           chmod -R a+rwX zap # the ZAP container runs as its own user
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:2.17.0@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238 \
-            zap-baseline.py -t http://127.0.0.1:3000/ -c rules.conf -r report.html
+            zap-baseline.py -t http://127.0.0.1:3000/ -c rules.conf -s -r report.html

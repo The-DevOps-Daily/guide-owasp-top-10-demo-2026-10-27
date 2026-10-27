@@ -14,7 +14,12 @@ export function preview({ safeFetch, log }) {
     } catch (err) {
       if (err instanceof SsrfError) {
         log.warn(
-          { event: `input_validation_fail:url,${req.user.name}`, ip: req.ip, reason: err.message },
+          {
+            event: `input_validation_fail:url,${req.user.name}`,
+            ip: req.ip,
+            reqId: req.id,
+            reason: err.message,
+          },
           'ssrf'
         );
         return res.status(400).json({ error: 'URL not allowed' });

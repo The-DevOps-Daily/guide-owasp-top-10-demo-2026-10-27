@@ -3,15 +3,16 @@
 groups:
   - name: invoices-security
     rules:
-      - alert: LoginFailuresFromOneAddress
+      - alert: LoginLimitHammered
+        # authn_login_fail_max is logged for every request the rate limiter refuses
         expr: |
           sum by (ip) (
-            count_over_time({service="invoices"} | json | event =~ "authn_login_fail.*" [5m])
-          ) > 20
+            count_over_time({service="invoices"} | json | event =~ "authn_login_fail_max.*" [15m])
+          ) > 10
         labels:
           severity: page
         annotations:
-          summary: 'More than 20 failed logins from {{ $labels.ip }} in 5 minutes'
+          summary: '{{ $labels.ip }} keeps trying to log in after hitting the rate limit'
           runbook: 'https://wiki.example.com/runbooks/credential-stuffing'
 
       - alert: LoginFailuresAcrossAccounts

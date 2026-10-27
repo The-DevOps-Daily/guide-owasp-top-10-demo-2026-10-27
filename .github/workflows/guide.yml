@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write # publish the tarball as a release asset
       id-token: write # Sigstore signing certificate
       attestations: write
     steps:
@@ -72,7 +72,14 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: owasp-top-10-demo-1.0.0.tgz
-      - name: Verify the attestation
+      - name: Publish the tarball as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v1 > /dev/null 2>&1 || gh release create v1 --title 'Attested package' \
+            --notes 'The npm pack tarball of this repository, with a build provenance attestation.'
+          gh release upload v1 owasp-top-10-demo-1.0.0.tgz --clobber
+      - name: Download it and verify the attestation
         env:
           GH_TOKEN: ${{ github.token }}
           GH_FORCE_TTY: '1'

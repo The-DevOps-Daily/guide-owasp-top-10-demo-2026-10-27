@@ -44,8 +44,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "invoices" {
   }
 }
 
-# SSRF defense in depth: require IMDSv2 session tokens, and keep the metadata
-# service out of reach of containers on the host (hop limit 1).
+# SSRF defense in depth: require IMDSv2 session tokens. A hop limit of 1 also keeps
+# tokens from containers on bridge networks; containers on the host network still
+# reach the service, so block it for them in the host firewall, or set
+# http_endpoint = "disabled" when nothing on the instance needs metadata.
 resource "aws_instance" "app" {
   ami           = var.ami_id
   instance_type = "t4g.small"

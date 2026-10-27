@@ -57,6 +57,18 @@ describe('SSRF: the preview endpoint', { skip }, () => {
     const res = await preview(`${outside.url}/redirect`);
     assert.equal(res.status, 400);
   });
+
+  it('stops a response that trickles in past the deadline', async () => {
+    const slow = await listen('127.0.0.2', (req, res) => {
+      res.writeHead(200);
+      const timer = setInterval(() => res.write('.'), 50); // never ends on its own
+      res.on('close', () => clearInterval(timer));
+    });
+    const safeFetch = createSafeFetch({ isAllowed: (a) => a === '127.0.0.2' });
+    await assert.rejects(safeFetch(`${slow.url}/`, { timeoutMs: 300 }), /timed out/);
+    slow.server.closeAllConnections();
+    slow.server.close();
+  });
 });
 
 describe('SSRF: isPublicAddress', () => {

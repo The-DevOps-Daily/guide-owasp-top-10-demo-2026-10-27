@@ -76,9 +76,9 @@ export function createSafeFetch({ isAllowed = isPublicAddress } = {}) {
     }
     const client = url.protocol === 'https:' ? https : http;
     return new Promise((resolve, reject) => {
-      const req = client.get(url, { lookup, agent: false, timeout: timeoutMs }, (res) => {
+      const req = client.get(url, { lookup, agent: false }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400) {
-          res.resume();
+          res.destroy();
           return reject(new SsrfError('redirects are not followed'));
         }
         const chunks = [];
@@ -93,7 +93,9 @@ export function createSafeFetch({ isAllowed = isPublicAddress } = {}) {
         );
         res.on('error', reject);
       });
-      req.on('timeout', () => req.destroy(new SsrfError('timed out')));
+      // One deadline for the whole exchange: lookup, connect, headers and body.
+      const deadline = setTimeout(() => req.destroy(new SsrfError('timed out')), timeoutMs);
+      req.on('close', () => clearTimeout(deadline));
       req.on('error', reject);
     });
   };

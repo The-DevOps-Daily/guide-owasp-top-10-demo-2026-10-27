@@ -31,6 +31,14 @@ describe('A07 authentication failures', () => {
     assert.equal((await app.call('GET', '/api/invoices/1002', { token })).status, 401);
   });
 
+  it('keeps at most 5 sessions per user', async () => {
+    const tokens = [];
+    for (let i = 0; i < 6; i++) tokens.push(await app.loginAs('admin'));
+    const status = async (token) => (await app.call('GET', '/api/admin/users', { token })).status;
+    assert.equal(await status(tokens[0]), 401); // the oldest session ended
+    assert.equal(await status(tokens[5]), 200);
+  });
+
   it('blocks a client after 5 failed logins in 15 minutes', async () => {
     // Two failures already happened in the first test.
     const statuses = [];

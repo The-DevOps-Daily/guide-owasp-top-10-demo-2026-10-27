@@ -12,7 +12,10 @@ export function invoiceRoutes({ db, log }) {
       .get(id, req.user.id);
     if (!invoice) {
       // 404 for "missing" and "not yours", so IDs cannot be probed.
-      log.warn({ event: `authz_fail:${req.user.name},invoice ${id}`, ip: req.ip }, 'not found');
+      log.warn(
+        { event: `authz_fail:${req.user.name},invoice ${id}`, ip: req.ip, reqId: req.id },
+        'not found'
+      );
       return res.status(404).json({ error: 'Not found' });
     }
     res.json(invoice);
