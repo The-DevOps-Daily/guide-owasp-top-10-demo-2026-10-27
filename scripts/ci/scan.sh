@@ -41,6 +41,12 @@ for dir in insecure deploy terraform; do
 trivy config --quiet --format json examples/$dir | jq -r '.Results[] | .Target as \$file | .Misconfigurations[]? | [\$file, .Severity, .ID, .Message] | @tsv'
 CMD
 done
+# The same scans with the reviewed, expiring exceptions; any other finding fails
+for dir in deploy terraform; do
+  capture "trivy-accepted-$dir" 0 <<CMD
+trivy config --quiet --ignorefile .trivyignore.yaml --exit-code 1 examples/$dir
+CMD
+done
 
 # A03 and A08: the workflow itself is part of the supply chain
 capture zizmor-insecure 14 <<'CMD'

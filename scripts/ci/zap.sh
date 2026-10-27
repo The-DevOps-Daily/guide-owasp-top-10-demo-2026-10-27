@@ -18,5 +18,9 @@ CMD
 capture zap-fixed 0 <<'CMD'
 docker run --rm --network host ghcr.io/zaproxy/zaproxy:2.17.0 zap-baseline.py -t http://127.0.0.1:3000/ -I | grep -v '^PASS'
 CMD
+must 'mkdir -p zap && cp zap-rules.conf zap/rules.conf && chmod -R a+rwX zap'
+capture zap-fixed-gated 0 <<'CMD'
+docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0 zap-baseline.py -t http://127.0.0.1:3000/ -c rules.conf | grep -v '^PASS'
+CMD
 
 finish

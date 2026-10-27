@@ -1,0 +1,23 @@
+# Accepted Trivy findings. Each entry says why it is accepted, and expires so
+# that someone reviews it again. Changes to this file need a security review.
+misconfigurations:
+  - id: KSV-0011
+    statement: >-
+      No CPU limit on purpose: limits throttle the app under load. CPU requests are
+      set, and the namespace has a ResourceQuota.
+    expired_at: 2027-04-30
+  - id: KSV-0125
+    statement: >-
+      example.com stands for the internal registry, which only accepts images
+      built and signed by CI.
+    expired_at: 2027-04-30
+  - id: AWS-0089
+    statement: >-
+      Object access is recorded with CloudTrail data events in the audit account,
+      not with S3 server access logs.
+    expired_at: 2027-04-30
+  - id: AWS-0132
+    statement: >-
+      The AWS managed KMS key meets the requirements for this data. Revisit if the
+      bucket starts to hold card data.
+    expired_at: 2027-04-30

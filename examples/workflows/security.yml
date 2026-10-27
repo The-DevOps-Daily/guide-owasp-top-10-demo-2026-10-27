@@ -84,7 +84,9 @@ jobs:
           timeout 30 bash -c 'until curl -sf http://127.0.0.1:3000/ > /dev/null; do sleep 1; done'
       - name: ZAP baseline scan (passive)
         run: |
-          mkdir -p zap && chmod 777 zap # the ZAP container runs as its own user
+          # zap-rules.conf records the reviewed IGNORE decisions; any other warning fails the job
+          mkdir -p zap && cp zap-rules.conf zap/rules.conf
+          chmod -R a+rwX zap # the ZAP container runs as its own user
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:2.17.0@sha256:030d3df57735dacbb83464854758e674dd9ad01d79d12a129a8e58b1fd384238 \
-            zap-baseline.py -t http://127.0.0.1:3000/ -r report.html
+            zap-baseline.py -t http://127.0.0.1:3000/ -c rules.conf -r report.html

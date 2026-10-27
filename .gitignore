@@ -3,3 +3,4 @@ captures/
 *.log
 *.tgz
 examples/deploy/secrets/
+zap/

@@ -27,6 +27,13 @@ resource "aws_s3_bucket_public_access_block" "invoices" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_versioning" "invoices" {
+  bucket = aws_s3_bucket.invoices.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "invoices" {
   bucket = aws_s3_bucket.invoices.id
   rule {
@@ -47,5 +54,9 @@ resource "aws_instance" "app" {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted = true
   }
 }
