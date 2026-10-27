@@ -10,9 +10,13 @@ export async function dnsLookup(req, res) {
     return res.status(400).json({ error: 'host must be a hostname' });
   }
   try {
-    const all = await new Promise((resolve, reject) =>
-      boundedLookup(host, { all: true }, (err, result) => (err ? reject(err) : resolve(result)))
-    );
+    const all = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new SsrfError('lookup timed out')), 3000);
+      boundedLookup(host, { all: true }, (err, result) => {
+        clearTimeout(timer);
+        return err ? reject(err) : resolve(result);
+      });
+    });
     // Internal names and addresses are not the caller's business.
     const addresses = all.map((a) => a.address).filter(isPublicAddress);
     if (addresses.length === 0) return res.status(404).json({ error: 'host not found' });

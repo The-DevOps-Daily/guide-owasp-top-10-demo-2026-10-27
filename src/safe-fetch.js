@@ -6,25 +6,40 @@ import net from 'node:net';
 export class SsrfError extends Error {}
 
 // A dns.lookup() call holds a thread pool slot until the resolver answers, even after
-// the request that started it has given up. Limit how many run and wait at once.
+// the request that started it has given up. Limit how many run and wait at once, and
+// drop waiting lookups that are older than their deadline instead of starting them.
 const MAX_ACTIVE_LOOKUPS = 4;
 const MAX_WAITING_LOOKUPS = 32;
+const MAX_WAIT_MS = 2000;
 let activeLookups = 0;
 const waitingLookups = [];
 
-export function boundedLookup(hostname, options, callback) {
-  if (activeLookups >= MAX_ACTIVE_LOOKUPS) {
-    if (waitingLookups.length >= MAX_WAITING_LOOKUPS) {
-      return process.nextTick(callback, new SsrfError('too many DNS lookups'));
+function startNextLookup() {
+  while (activeLookups < MAX_ACTIVE_LOOKUPS && waitingLookups.length > 0) {
+    const next = waitingLookups.shift();
+    if (Date.now() > next.expires) {
+      next.callback(new SsrfError('DNS lookup waited too long'));
+    } else {
+      runLookup(next.hostname, next.options, next.callback);
     }
-    return waitingLookups.push(() => boundedLookup(hostname, options, callback));
   }
+}
+
+function runLookup(hostname, options, callback) {
   activeLookups++;
   dns.lookup(hostname, options, (...args) => {
     activeLookups--;
-    waitingLookups.shift()?.();
+    startNextLookup();
     callback(...args);
   });
+}
+
+export function boundedLookup(hostname, options, callback) {
+  if (activeLookups < MAX_ACTIVE_LOOKUPS) return runLookup(hostname, options, callback);
+  if (waitingLookups.length >= MAX_WAITING_LOOKUPS) {
+    return process.nextTick(callback, new SsrfError('too many DNS lookups'));
+  }
+  waitingLookups.push({ hostname, options, callback, expires: Date.now() + MAX_WAIT_MS });
 }
 
 // IPv4 ranges that are not public: "this network", private, shared (CGNAT), loopback,

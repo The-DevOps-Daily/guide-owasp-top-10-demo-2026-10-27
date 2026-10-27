@@ -22,6 +22,13 @@ describe('A02 and A10: errors and exceptional conditions', () => {
     assert.equal(res.headers.get('x-powered-by'), null);
   });
 
+  it('sends no-store on API responses, errors included', async () => {
+    const ok = await app.call('GET', '/api/accounts', { token: alice });
+    const bad = await app.call('POST', '/api/transfers', { token: alice, body: '{"from": 1,' });
+    assert.equal(ok.headers.get('cache-control'), 'no-store');
+    assert.equal(bad.headers.get('cache-control'), 'no-store');
+  });
+
   it('rolls back the debit when the credit fails', async () => {
     const before = balances();
     const res = await app.call('POST', '/api/transfers', {
